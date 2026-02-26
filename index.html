@@ -21,9 +21,7 @@ textarea{resize:vertical;min-height:70px}
 button{background:#2563eb;color:#fff;border:none;font-weight:600;margin-top:12px;cursor:pointer}
 button.secondary{background:#e5e7eb;color:#111}
 button.danger{background:#dc2626}
-.item{border-top:1px solid #eee;padding:12px 0;font-size:14px;display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}
-.item-actions{display:flex;gap:8px}
-.item-actions button{width:auto;padding:6px 12px;font-size:13px;margin-top:0}
+.item{border-top:1px solid #eee;padding:12px 0;font-size:14px;display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;cursor:pointer}
 .result{font-weight:700;margin-top:10px;font-size:14px}
 footer{text-align:center;padding:16px;font-size:12px;color:#9ca3af}
 .modal{position:fixed;inset:0;background:rgba(0,0,0,.6);display:none;align-items:center;justify-content:center;z-index:1000;padding:20px}
@@ -70,21 +68,21 @@ footer{text-align:center;padding:16px;font-size:12px;color:#9ca3af}
 
 <footer>Elaborado por: Eng. Leonardo Cavalcante</footer>
 
-<div class="modal" id="modalRelatorio">
- <div class="modal-content">
-  <h2>Gerar Relatório</h2>
-  <p>Deseja gerar o relatório desta vistoria?</p>
-  <div class="modal-actions">
-   <button type="button" class="secondary" onclick="modalRelatorio.style.display='none'">Cancelar</button>
-   <button type="button" onclick="confirmarRelatorio()">Confirmar</button>
+<!-- MODAL -->
+<div class="modal" id="modalVistoria">
+  <div class="modal-content">
+    <h3 id="modalTitulo"></h3>
+    <div class="modal-actions">
+      <button onclick="gerarRelatorioSelecionado()">Gerar Relatório</button>
+      <button onclick="editarSelecionado()">Editar</button>
+      <button class="danger" onclick="excluirSelecionado()">Excluir</button>
+    </div>
+    <button class="secondary" onclick="fecharModal()" style="margin-top:12px;">Fechar</button>
   </div>
- </div>
 </div>
 
 <script>
 const { jsPDF } = window.jspdf
-
-/* ===== IndexedDB (persistência iPhone) ===== */
 
 let db
 function iniciarDB(){
@@ -95,7 +93,6 @@ function iniciarDB(){
    db.createObjectStore("vistorias",{keyPath:"id",autoIncrement:true})
   }
   request.onsuccess=e=>{db=e.target.result;resolve()}
-  request.onerror=e=>reject(e)
  })
 }
 function salvarTodas(lista){
@@ -116,8 +113,6 @@ function carregarTodas(){
  })
 }
 
-/* ===== Sistema original mantido ===== */
-
 const unidades={
  m:{label:"Metro (m)",dims:["Comprimento"],calc:d=>d[0]},
  m2:{label:"Metro Quadrado (m²)",dims:["Largura","Altura"],calc:d=>d[0]*d[1]},
@@ -127,7 +122,8 @@ const unidades={
 
 let vistoriaAtual={itens:[]}
 let vistorias=[]
-let vistoriaRelatorioIndex=null
+let editIndex=null
+let selecionadoIndex=null
 
 Object.keys(unidades).forEach(u=>{
  unidade.innerHTML+=`<option value="${u}">${unidades[u].label}</option>`
@@ -183,26 +179,27 @@ async function salvarVistoria(){
  if(!vistoriaNome.value.trim())return
  if(vistoriaAtual.itens.length===0)return
 
- vistorias.push({
+ const dados={
   nome:vistoriaNome.value,
   data:formatarDataBR(vistoriaData.value),
   resp:vistoriaResp.value,
   itens:vistoriaAtual.itens
- })
+ }
+
+ if(editIndex!==null){
+  vistorias[editIndex]=dados
+  editIndex=null
+ }else{
+  vistorias.push(dados)
+ }
 
  await salvarTodas(vistorias)
 
  vistoriaAtual={itens:[]}
- vistoriaNome.value="";vistoriaResp.value=""
+ vistoriaNome.value=""
+ vistoriaResp.value=""
  vistoriaData.value=dataHojeISO()
  renderLista()
- renderVistorias()
-}
-
-function excluirVistoria(index){
- if(!confirm("Deseja realmente excluir esta vistoria?"))return
- vistorias.splice(index,1)
- salvarTodas(vistorias)
  renderVistorias()
 }
 
@@ -210,29 +207,43 @@ function renderVistorias(){
  vistoriasLista.innerHTML=""
  vistorias.forEach((v,i)=>{
   vistoriasLista.innerHTML+=`
-   <div class="item">
-    <div>
-     <b>${v.nome}</b><br>${v.data} - ${v.resp}
-    </div>
-    <div class="item-actions">
-     <button onclick="abrirRelatorio(${i})">Relatório</button>
-     <button class="danger" onclick="excluirVistoria(${i})">Excluir</button>
-    </div>
+   <div class="item" onclick="abrirModal(${i})">
+     <div>
+      <b>${v.nome}</b><br>${v.data} - ${v.resp}
+     </div>
    </div>`
  })
 }
 
-/* ===== RELATÓRIO PROFISSIONAL ORIGINAL ===== */
+/* ===== MODAL ===== */
 
-function abrirRelatorio(i){
- vistoriaRelatorioIndex=i
- modalRelatorio.style.display="flex"
+function abrirModal(index){
+ selecionadoIndex=index
+ const v=vistorias[index]
+ modalTitulo.innerText=v.nome+" ("+v.data+")"
+ modalVistoria.style.display="flex"
+}
+function fecharModal(){
+ modalVistoria.style.display="none"
 }
 
-function confirmarRelatorio(){
- modalRelatorio.style.display="none"
- gerarPDF(vistorias[vistoriaRelatorioIndex])
+function gerarRelatorioSelecionado(){
+ gerarPDF(vistorias[selecionadoIndex])
+ fecharModal()
 }
+function editarSelecionado(){
+ editarVistoria(selecionadoIndex)
+ fecharModal()
+}
+function excluirSelecionado(){
+ if(!confirm("Deseja excluir esta vistoria?"))return
+ vistorias.splice(selecionadoIndex,1)
+ salvarTodas(vistorias)
+ renderVistorias()
+ fecharModal()
+}
+
+/* ===== PDF (inalterado) ===== */
 
 function gerarPDF(v){
  const pdf=new jsPDF("p","mm","a4")
@@ -253,7 +264,6 @@ function gerarPDF(v){
 
  for(let i=0;i<v.itens.length;i+=2){
   if(y>220){pdf.addPage();y=20}
-
   const item1=v.itens[i]
   const item2=v.itens[i+1]
 
@@ -264,31 +274,42 @@ function gerarPDF(v){
    pdf.rect(x,y,colWidth,8,"F")
    pdf.setFontSize(10)
    pdf.text(`${i+idx+1}. ${item.desc}`,x+2,y+6)
-
    pdf.setFontSize(8)
-   pdf.text(
-    `Memória de cálculo: ${item.dims.join(" x ")} = ${item.total.toFixed(2)} ${item.unidade}`,
-    x+2,y+14,{maxWidth:colWidth-4}
-   )
-
+   pdf.text(`Memória de cálculo: ${item.dims.join(" x ")} = ${item.total.toFixed(2)} ${item.unidade}`,
+    x+2,y+14,{maxWidth:colWidth-4})
    if(item.foto){
     pdf.rect(x,y+18,colWidth,50)
     pdf.addImage(item.foto,"JPEG",x,y+18,colWidth,50)
    }
   })
-
   y+=72
  }
 
  pdf.save(`RELATORIO_${v.nome.replace(/\s+/g,"_")}.pdf`)
 }
 
+/* ===== Datas ===== */
+
 function formatarDataBR(dataISO){
  const [a,m,d]=dataISO.split("-")
  return `${d}/${m}/${a}`
 }
+function reverterDataISO(dataBR){
+ const [d,m,a]=dataBR.split("/")
+ return `${a}-${m}-${d}`
+}
 function dataHojeISO(){
  return new Date().toISOString().split("T")[0]
+}
+
+function editarVistoria(index){
+ const v=vistorias[index]
+ editIndex=index
+ vistoriaNome.value=v.nome
+ vistoriaResp.value=v.resp
+ vistoriaData.value=reverterDataISO(v.data)
+ vistoriaAtual.itens=[...v.itens]
+ renderLista()
 }
 
 (async function init(){
@@ -297,7 +318,6 @@ function dataHojeISO(){
  vistoriaData.value=dataHojeISO()
  renderVistorias()
 })()
-
 </script>
 </body>
 </html>
