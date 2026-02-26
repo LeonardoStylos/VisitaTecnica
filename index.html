@@ -2,71 +2,140 @@
 <html lang="pt-BR">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>Vistoria Técnica</title>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 
 <style>
-*{box-sizing:border-box;font-family:system-ui,-apple-system,Segoe UI,Roboto}
-body{
- margin:0;
- background:#0f172a; /* fundo escuro */
- color:#e5e7eb
+*{
+ box-sizing:border-box;
+ font-family:system-ui,-apple-system,Segoe UI,Roboto;
+ -webkit-tap-highlight-color:transparent;
 }
+
+html,body{
+ margin:0;
+ padding:0;
+ background:#0f172a;
+ color:#e5e7eb;
+}
+
+body{
+ min-height:100vh;
+}
+
 header{
  background:#020617;
  color:#fff;
  padding:16px;
  text-align:center;
- font-weight:600
+ font-weight:600;
+ font-size:18px;
 }
-main{padding:16px;max-width:700px;margin:auto}
+
+main{
+ padding:14px;
+ max-width:700px;
+ margin:auto;
+ width:100%;
+}
+
 .card{
  background:#fff;
  color:#222;
- border-radius:10px;
+ border-radius:12px;
  padding:16px;
  margin-bottom:16px;
- box-shadow:0 4px 10px rgba(0,0,0,.25)
+ box-shadow:0 6px 16px rgba(0,0,0,.25);
+ width:100%;
+ overflow:hidden;
 }
-h2{margin:0 0 12px;font-size:18px}
-label{font-size:13px;font-weight:600;margin-top:10px;display:block}
+
+h2{
+ margin:0 0 12px;
+ font-size:17px;
+}
+
+label{
+ font-size:13px;
+ font-weight:600;
+ margin-top:10px;
+ display:block;
+}
+
 input,select,textarea,button{
  width:100%;
- padding:10px;
- margin-top:4px;
+ max-width:100%;
+ padding:12px;
+ margin-top:6px;
  border:1px solid #ccc;
- border-radius:6px;
- font-size:14px
+ border-radius:8px;
+ font-size:16px;
+ background:#fff;
 }
-textarea{resize:vertical}
+
+input[type="date"]{
+ appearance:none;
+ -webkit-appearance:none;
+}
+
+textarea{
+ resize:vertical;
+ min-height:70px;
+}
+
 button{
  background:#2563eb;
  color:#fff;
  border:none;
- font-weight:600
+ font-weight:600;
+ margin-top:12px;
+ cursor:pointer;
+ transition:.2s;
 }
+
+button:active{
+ transform:scale(.98);
+}
+
 button.secondary{
  background:#e5e7eb;
- color:#111
+ color:#111;
+}
+
+button.danger{
+ background:#dc2626;
 }
 
 .item{
  border-top:1px solid #eee;
- padding:10px 0;
- font-size:13px;
+ padding:12px 0;
+ font-size:14px;
  display:flex;
  justify-content:space-between;
- align-items:center
-}
-.item-actions button{
- width:auto;
- padding:6px 10px;
- font-size:12px
+ align-items:center;
+ gap:10px;
+ flex-wrap:wrap;
 }
 
-.result{font-weight:700;margin-top:8px}
+.item-actions{
+ display:flex;
+ gap:8px;
+}
+
+.item-actions button{
+ width:auto;
+ padding:6px 12px;
+ font-size:13px;
+ margin-top:0;
+}
+
+.result{
+ font-weight:700;
+ margin-top:10px;
+ font-size:14px;
+}
 
 .modal{
  position:fixed;
@@ -75,24 +144,43 @@ button.secondary{
  display:none;
  align-items:center;
  justify-content:center;
- z-index:10
+ z-index:1000;
+ padding:20px;
 }
+
 .modal-content{
  background:#fff;
  color:#222;
- border-radius:10px;
- padding:16px;
- width:90%;
- max-width:420px
+ border-radius:12px;
+ padding:18px;
+ width:100%;
+ max-width:420px;
 }
-.modal-actions{display:flex;gap:8px;margin-top:14px}
-.modal-actions button{flex:1}
+
+.modal-actions{
+ display:flex;
+ gap:10px;
+ margin-top:18px;
+}
+
+.modal-actions button{
+ flex:1;
+}
 
 footer{
  text-align:center;
- padding:14px;
+ padding:16px;
  font-size:12px;
- color:#9ca3af
+ color:#9ca3af;
+}
+
+@media (max-width:480px){
+ main{
+  padding:10px;
+ }
+ .card{
+  padding:14px;
+ }
 }
 </style>
 </head>
@@ -104,25 +192,39 @@ footer{
 
 <div class="card">
 <h2>Dados da Vistoria</h2>
-<label>Nome</label><input id="vistoriaNome">
-<label>Data</label><input type="date" id="vistoriaData">
-<label>Responsável</label><input id="vistoriaResp">
+<label>Nome</label>
+<input id="vistoriaNome" autocomplete="off">
+
+<label>Data</label>
+<input type="date" id="vistoriaData">
+
+<label>Responsável</label>
+<input id="vistoriaResp" autocomplete="off">
 </div>
 
 <div class="card">
 <h2>Novo Item</h2>
-<label>Descrição</label><textarea id="desc"></textarea>
-<label>Unidade</label><select id="unidade"></select>
+
+<label>Descrição</label>
+<textarea id="desc"></textarea>
+
+<label>Unidade</label>
+<select id="unidade"></select>
+
 <div id="dimensoes"></div>
+
 <div class="result" id="resultado"></div>
-<label>Foto</label><input type="file" id="foto" accept="image/*" capture="environment">
-<button onclick="addItem()">Adicionar Item</button>
+
+<label>Foto</label>
+<input type="file" id="foto" accept="image/*" capture="environment">
+
+<button type="button" onclick="addItem()">Adicionar Item</button>
 </div>
 
 <div class="card">
 <h2>Itens da Vistoria</h2>
 <div id="lista"></div>
-<button class="secondary" onclick="salvarVistoria()">Salvar Vistoria</button>
+<button type="button" class="secondary" onclick="salvarVistoria()">Salvar Vistoria</button>
 </div>
 
 <div class="card">
@@ -141,8 +243,8 @@ Elaborado por: Eng. Leonardo Cavalcante
   <h2>Gerar Relatório</h2>
   <p>Deseja gerar o relatório desta vistoria?</p>
   <div class="modal-actions">
-   <button class="secondary" onclick="modalRelatorio.style.display='none'">Cancelar</button>
-   <button onclick="confirmarRelatorio()">Confirmar</button>
+   <button type="button" class="secondary" onclick="modalRelatorio.style.display='none'">Cancelar</button>
+   <button type="button" onclick="confirmarRelatorio()">Confirmar</button>
   </div>
  </div>
 </div>
@@ -158,8 +260,21 @@ const unidades={
 }
 
 let vistoriaAtual={itens:[]}
-let vistorias=JSON.parse(localStorage.getItem("vistorias"))||[]
+let vistorias=[]
 let vistoriaRelatorioIndex=null
+
+function carregarVistorias(){
+ try{
+  const dados=localStorage.getItem("vistorias")
+  vistorias=dados?JSON.parse(dados):[]
+ }catch(e){
+  vistorias=[]
+ }
+}
+
+function salvarLocal(){
+ localStorage.setItem("vistorias",JSON.stringify(vistorias))
+}
 
 Object.keys(unidades).forEach(u=>{
  unidade.innerHTML+=`<option value="${u}">${unidades[u].label}</option>`
@@ -167,7 +282,9 @@ Object.keys(unidades).forEach(u=>{
 
 function renderDims(){
  dimensoes.innerHTML=""
- unidades[unidade.value].dims.forEach(()=>dimensoes.innerHTML+=`<input type="number" step="any">`)
+ unidades[unidade.value].dims.forEach(()=>{
+  dimensoes.innerHTML+=`<input type="number" step="any" inputmode="decimal">`
+ })
 }
 renderDims()
 unidade.onchange=renderDims
@@ -179,23 +296,34 @@ function calc(){
 }
 
 function addItem(){
- if(!desc.value.trim())return
+ if(!desc.value.trim()) return
+
  const vals=[...dimensoes.querySelectorAll("input")].map(i=>+i.value||0)
  const file=foto.files[0]
- const r=new FileReader()
- r.onload=e=>{
+
+ function finalizar(fotoBase64=null){
   vistoriaAtual.itens.push({
    desc:desc.value,
    unidade:unidade.value,
    dims:vals,
    total:unidades[unidade.value].calc(vals),
-   foto:e.target.result
+   foto:fotoBase64
   })
-  desc.value="";foto.value="";resultado.innerText=""
+
+  desc.value=""
+  foto.value=""
+  resultado.innerText=""
   dimensoes.querySelectorAll("input").forEach(i=>i.value="")
   renderLista()
  }
- if(file) r.readAsDataURL(file)
+
+ if(file){
+  const r=new FileReader()
+  r.onload=e=>finalizar(e.target.result)
+  r.readAsDataURL(file)
+ }else{
+  finalizar(null)
+ }
 }
 
 function renderLista(){
@@ -212,18 +340,30 @@ function renderLista(){
 }
 
 function salvarVistoria(){
- if(!vistoriaNome.value.trim())return
+ if(!vistoriaNome.value.trim()) return
+ if(vistoriaAtual.itens.length===0) return
+
  vistorias.push({
   nome:vistoriaNome.value,
   data:formatarDataBR(vistoriaData.value),
   resp:vistoriaResp.value,
   itens:vistoriaAtual.itens
  })
- localStorage.setItem("vistorias",JSON.stringify(vistorias))
+
+ salvarLocal()
+
  vistoriaAtual={itens:[]}
- vistoriaNome.value="";vistoriaResp.value=""
+ vistoriaNome.value=""
+ vistoriaResp.value=""
  vistoriaData.value=dataHojeISO()
  renderLista()
+ renderVistorias()
+}
+
+function excluirVistoria(index){
+ if(!confirm("Deseja realmente excluir esta vistoria?")) return
+ vistorias.splice(index,1)
+ salvarLocal()
  renderVistorias()
 }
 
@@ -236,7 +376,8 @@ function renderVistorias(){
      <b>${v.nome}</b><br>${v.data} - ${v.resp}
     </div>
     <div class="item-actions">
-     <button onclick="abrirRelatorio(${i})">Relatório</button>
+     <button type="button" onclick="abrirRelatorio(${i})">Relatório</button>
+     <button type="button" class="danger" onclick="excluirVistoria(${i})">Excluir</button>
     </div>
    </div>`
  })
@@ -305,10 +446,12 @@ function formatarDataBR(dataISO){
  const [a,m,d]=dataISO.split("-")
  return `${d}/${m}/${a}`
 }
+
 function dataHojeISO(){
  return new Date().toISOString().split("T")[0]
 }
 
+carregarVistorias()
 vistoriaData.value=dataHojeISO()
 renderVistorias()
 </script>
