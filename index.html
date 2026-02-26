@@ -8,7 +8,6 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 
 <style>
-/* --- SEU CSS ORIGINAL MANTIDO --- */
 *{box-sizing:border-box;font-family:system-ui,-apple-system,Segoe UI,Roboto;-webkit-tap-highlight-color:transparent}
 html,body{margin:0;padding:0;background:#0f172a;color:#e5e7eb}
 body{min-height:100vh}
@@ -24,6 +23,7 @@ button.secondary{background:#e5e7eb;color:#111}
 button.danger{background:#dc2626}
 .item{border-top:1px solid #eee;padding:12px 0;font-size:14px;display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}
 .item-actions{display:flex;gap:8px}
+.item-actions button{width:auto;padding:6px 12px;font-size:13px;margin-top:0}
 .result{font-weight:700;margin-top:10px;font-size:14px}
 footer{text-align:center;padding:16px;font-size:12px;color:#9ca3af}
 .modal{position:fixed;inset:0;background:rgba(0,0,0,.6);display:none;align-items:center;justify-content:center;z-index:1000;padding:20px}
@@ -37,6 +37,7 @@ footer{text-align:center;padding:16px;font-size:12px;color:#9ca3af}
 <header>Vistoria Técnica</header>
 
 <main>
+
 <div class="card">
 <h2>Dados da Vistoria</h2>
 <label>Nome</label><input id="vistoriaNome">
@@ -64,6 +65,7 @@ footer{text-align:center;padding:16px;font-size:12px;color:#9ca3af}
 <h2>Vistorias Salvas</h2>
 <div id="vistoriasLista"></div>
 </div>
+
 </main>
 
 <footer>Elaborado por: Eng. Leonardo Cavalcante</footer>
@@ -82,31 +84,21 @@ footer{text-align:center;padding:16px;font-size:12px;color:#9ca3af}
 <script>
 const { jsPDF } = window.jspdf
 
-/* ===============================
-   INDEXED DB (PERSISTENTE IOS)
-================================= */
+/* ===== IndexedDB (persistência iPhone) ===== */
 
 let db
-
 function iniciarDB(){
  return new Promise((resolve,reject)=>{
   const request=indexedDB.open("VistoriasDB",1)
-
   request.onupgradeneeded=e=>{
    db=e.target.result
    db.createObjectStore("vistorias",{keyPath:"id",autoIncrement:true})
   }
-
-  request.onsuccess=e=>{
-   db=e.target.result
-   resolve()
-  }
-
+  request.onsuccess=e=>{db=e.target.result;resolve()}
   request.onerror=e=>reject(e)
  })
 }
-
-function salvarTodasVistorias(lista){
+function salvarTodas(lista){
  return new Promise(resolve=>{
   const tx=db.transaction("vistorias","readwrite")
   const store=tx.objectStore("vistorias")
@@ -115,17 +107,16 @@ function salvarTodasVistorias(lista){
   tx.oncomplete=()=>resolve()
  })
 }
-
-function carregarTodasVistorias(){
+function carregarTodas(){
  return new Promise(resolve=>{
   const tx=db.transaction("vistorias","readonly")
   const store=tx.objectStore("vistorias")
-  const request=store.getAll()
-  request.onsuccess=()=>resolve(request.result || [])
+  const req=store.getAll()
+  req.onsuccess=()=>resolve(req.result||[])
  })
 }
 
-/* =============================== */
+/* ===== Sistema original mantido ===== */
 
 const unidades={
  m:{label:"Metro (m)",dims:["Comprimento"],calc:d=>d[0]},
@@ -144,9 +135,7 @@ Object.keys(unidades).forEach(u=>{
 
 function renderDims(){
  dimensoes.innerHTML=""
- unidades[unidade.value].dims.forEach(()=>{
-  dimensoes.innerHTML+=`<input type="number" step="any">`
- })
+ unidades[unidade.value].dims.forEach(()=>dimensoes.innerHTML+=`<input type="number" step="any">`)
 }
 renderDims()
 unidade.onchange=renderDims
@@ -158,30 +147,23 @@ function calc(){
 }
 
 function addItem(){
- if(!desc.value.trim()) return
+ if(!desc.value.trim())return
  const vals=[...dimensoes.querySelectorAll("input")].map(i=>+i.value||0)
  const file=foto.files[0]
-
- function finalizar(fotoBase64=null){
+ const r=new FileReader()
+ r.onload=e=>{
   vistoriaAtual.itens.push({
    desc:desc.value,
    unidade:unidade.value,
    dims:vals,
    total:unidades[unidade.value].calc(vals),
-   foto:fotoBase64
+   foto:e.target.result
   })
-  desc.value=""
-  foto.value=""
-  resultado.innerText=""
+  desc.value="";foto.value="";resultado.innerText=""
   dimensoes.querySelectorAll("input").forEach(i=>i.value="")
   renderLista()
  }
-
- if(file){
-  const r=new FileReader()
-  r.onload=e=>finalizar(e.target.result)
-  r.readAsDataURL(file)
- } else finalizar()
+ if(file) r.readAsDataURL(file)
 }
 
 function renderLista(){
@@ -198,8 +180,8 @@ function renderLista(){
 }
 
 async function salvarVistoria(){
- if(!vistoriaNome.value.trim()) return
- if(vistoriaAtual.itens.length===0) return
+ if(!vistoriaNome.value.trim())return
+ if(vistoriaAtual.itens.length===0)return
 
  vistorias.push({
   nome:vistoriaNome.value,
@@ -208,20 +190,19 @@ async function salvarVistoria(){
   itens:vistoriaAtual.itens
  })
 
- await salvarTodasVistorias(vistorias)
+ await salvarTodas(vistorias)
 
  vistoriaAtual={itens:[]}
- vistoriaNome.value=""
- vistoriaResp.value=""
+ vistoriaNome.value="";vistoriaResp.value=""
  vistoriaData.value=dataHojeISO()
  renderLista()
  renderVistorias()
 }
 
 function excluirVistoria(index){
- if(!confirm("Deseja realmente excluir esta vistoria?")) return
+ if(!confirm("Deseja realmente excluir esta vistoria?"))return
  vistorias.splice(index,1)
- salvarTodasVistorias(vistorias)
+ salvarTodas(vistorias)
  renderVistorias()
 }
 
@@ -241,6 +222,8 @@ function renderVistorias(){
  })
 }
 
+/* ===== RELATÓRIO PROFISSIONAL ORIGINAL ===== */
+
 function abrirRelatorio(i){
  vistoriaRelatorioIndex=i
  modalRelatorio.style.display="flex"
@@ -252,25 +235,65 @@ function confirmarRelatorio(){
 }
 
 function gerarPDF(v){
- const pdf=new jsPDF()
- pdf.text(`Vistoria: ${v.nome}`,10,10)
- pdf.text(`Data: ${v.data}`,10,16)
- pdf.text(`Responsável: ${v.resp}`,10,22)
- pdf.save(`RELATORIO_${v.nome}.pdf`)
+ const pdf=new jsPDF("p","mm","a4")
+ let y=18
+ const colWidth=90
+ const gap=8
+
+ pdf.setFontSize(16)
+ pdf.text("RELATÓRIO FOTOGRÁFICO DE VISTORIA",105,y,{align:"center"})
+ y+=10
+
+ pdf.setFontSize(10)
+ pdf.rect(10,y,190,20)
+ pdf.text(`Vistoria: ${v.nome}`,12,y+6)
+ pdf.text(`Data: ${v.data}`,12,y+12)
+ pdf.text(`Responsável: ${v.resp}`,110,y+6)
+ y+=28
+
+ for(let i=0;i<v.itens.length;i+=2){
+  if(y>220){pdf.addPage();y=20}
+
+  const item1=v.itens[i]
+  const item2=v.itens[i+1]
+
+  ;[item1,item2].forEach((item,idx)=>{
+   if(!item)return
+   const x=10+(idx*(colWidth+gap))
+   pdf.setFillColor(240,240,240)
+   pdf.rect(x,y,colWidth,8,"F")
+   pdf.setFontSize(10)
+   pdf.text(`${i+idx+1}. ${item.desc}`,x+2,y+6)
+
+   pdf.setFontSize(8)
+   pdf.text(
+    `Memória de cálculo: ${item.dims.join(" x ")} = ${item.total.toFixed(2)} ${item.unidade}`,
+    x+2,y+14,{maxWidth:colWidth-4}
+   )
+
+   if(item.foto){
+    pdf.rect(x,y+18,colWidth,50)
+    pdf.addImage(item.foto,"JPEG",x,y+18,colWidth,50)
+   }
+  })
+
+  y+=72
+ }
+
+ pdf.save(`RELATORIO_${v.nome.replace(/\s+/g,"_")}.pdf`)
 }
 
 function formatarDataBR(dataISO){
  const [a,m,d]=dataISO.split("-")
  return `${d}/${m}/${a}`
 }
-
 function dataHojeISO(){
  return new Date().toISOString().split("T")[0]
 }
 
 (async function init(){
  await iniciarDB()
- vistorias=await carregarTodasVistorias()
+ vistorias=await carregarTodas()
  vistoriaData.value=dataHojeISO()
  renderVistorias()
 })()
